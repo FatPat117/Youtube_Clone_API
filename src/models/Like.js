@@ -20,9 +20,6 @@ const likeSchema = new mongoose.Schema(
 );
 
 // Ensure that a 'like' must refer to either a video or a comment, but not both
-likeSchema.index({ likedBy: 1, video: 1 }, { unique: true, sparse: true });
-likeSchema.index({ likedBy: 1, comment: 1 }, { unique: true, sparse: true });
-
 likeSchema.pre("save", function (next) {
         if (!this.video && !this.comment) {
                 return next(new Error("A like must refer to either a video or a comment"));
@@ -34,6 +31,10 @@ likeSchema.pre("save", function (next) {
 
         next();
 });
+
+// Compound index to ensure that a user can only like a video or a comment once
+likeSchema.index({ likedBy: 1, video: 1 }, { unique: true, sparse: true });
+likeSchema.index({ likedBy: 1, comment: 1 }, { unique: true, sparse: true });
 
 // Model
 const Like = mongoose.model("Like", likeSchema);
