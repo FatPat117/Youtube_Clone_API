@@ -56,7 +56,7 @@ const channelAnalyticsSchema = new mongoose.Schema(
 );
 
 // index for faster lookups
-channelAnalyticsSchema.index({ channel: 1, date: 1 });
+channelAnalyticsSchema.index({ channel: 1 });
 
 // model
 const ChannelAnalytics = mongoose.model("ChannelAnalytics", channelAnalyticsSchema);

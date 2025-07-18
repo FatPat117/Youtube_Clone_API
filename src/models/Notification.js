@@ -2,10 +2,10 @@ const mongoose = require("mongoose");
 
 const notificationSchema = new mongoose.Schema(
         {
-                recipent: {
+                recipient: {
                         type: mongoose.Schema.Types.ObjectId,
                         ref: "User",
-                        required: [true, "recipent is required"],
+                        required: [true, "recipient is required"],
                 },
                 sender: {
                         type: mongoose.Schema.Types.ObjectId,
