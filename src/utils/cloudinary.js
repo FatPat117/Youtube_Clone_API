@@ -1,6 +1,6 @@
 const cloudinary = require("cloudinary").v2;
 const appConfig = require("../config/appConfig");
-const ApiError = require("./apiError");
+const ApiError = require("./ApiError");
 // Configure Cloudinary
 cloudinary.config({
         cloud_name: appConfig.cloudinary.cloudName,
