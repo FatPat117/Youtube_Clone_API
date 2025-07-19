@@ -1,5 +1,9 @@
 const mongoose = require("mongoose");
+
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+
+const appConfig = require("../config/appConfig");
 
 // Schema
 const userSchema = new mongoose.Schema(
@@ -115,6 +119,24 @@ userSchema.methods.isPasswordCorrect = async function (password) {
         return await bcrypt.compare(password, this.password);
 };
 
+// Generate access token
+userSchema.methods.generateAccessToken = function () {
+        return jwt.sign(
+                { _id: this._id, email: this.email, userName: this.userName, fullName: this.fullName },
+                appConfig.accessTokenSecret,
+                {
+                        expiresIn: appConfig.accessTokenExpiry,
+                }
+        );
+};
+
+// Generate refresh token
+userSchema.methods.generateRefreshToken = function () {
+        return jwt.sign({ _id: this._id }, appConfig.refreshTokenSecret, {
+                expiresIn: appConfig.refreshTokenExpiry,
+        });
+};
+//
 // Model
 const User = mongoose.model("User", userSchema);
 

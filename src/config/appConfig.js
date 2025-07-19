@@ -4,7 +4,7 @@ dotenv.config();
 
 const appConfig = {
         port: process.env.PORT || 8000,
-        accessTokenSecret: process.env.ACCESS_TOKEN_SECRET || 8000,
+        accessTokenSecret: process.env.ACCESS_TOKEN_SECRET || "access-token-secret",
         nodeEnv: process.env.NODE_ENV || "development",
         mongoURI: process.env.MONGODB_URI || "mongodb://localhost:27017/youtube-clone",
         refreshTokenSecret: process.env.REFRESH_TOKEN_SECRET,
