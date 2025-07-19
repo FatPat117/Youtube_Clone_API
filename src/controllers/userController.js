@@ -90,8 +90,19 @@ exports.registerUser = asyncHandler(async (req, res, next) => {
                 return next(new ApiError(500, "Failed to create user"));
         }
 
+        // Generate access token
+        const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
+        const cookieOptions = {
+                httpOnly: true,
+                sameSite: "strict",
+                secure: appConfig.nodeEnv === "production",
+        };
+
         // send response
-        res.status(201).json(new ApiResponse(201, createdUser, "User registered successfully"));
+        res.status(201)
+                .cookie("accessToken", accessToken, cookieOptions)
+                .cookie("refreshToken", refreshToken, cookieOptions)
+                .json(new ApiResponse(201, createdUser, "User registered successfully"));
 });
 
 // @ Desc: Login a user
