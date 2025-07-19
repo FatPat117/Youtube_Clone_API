@@ -5,7 +5,7 @@ const ApiError = require("../utils/ApiError");
 // Configure store
 const storage = multer.diskStorage({
         destination: function (req, file, cb) {
-                cb(null, path.join(__dirname, "../uploads")); // where to save the file before uploading to cloudinary
+                cb(null, path.resolve(__dirname, "../../uploads")); // where to save the file before uploading to cloudinary
         },
         filename: function (req, file, cb) {
                 const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
