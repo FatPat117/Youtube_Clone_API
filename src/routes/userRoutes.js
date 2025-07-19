@@ -14,9 +14,9 @@ router.post(
         userController.registerUser
 );
 router.post("/login", userController.loginUser);
-
+router.post("/refresh-token", userController.refreshAccessToken);
 // Private routes
 router.use(verifyJWT);
 router.post("/logout", userController.logoutUser);
-
+router.patch("/change-password", userController.changePassword);
 module.exports = router;

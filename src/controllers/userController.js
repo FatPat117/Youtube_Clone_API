@@ -92,6 +92,7 @@ exports.registerUser = asyncHandler(async (req, res, next) => {
 
         // Generate access token
         const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
+
         const cookieOptions = {
                 httpOnly: true,
                 sameSite: "strict",
@@ -170,4 +171,100 @@ exports.logoutUser = asyncHandler(async (req, res, next) => {
         res.clearCookie("accessToken", cookieOptions);
         res.clearCookie("refreshToken", cookieOptions);
         res.status(200).json(new ApiResponse(200, {}, "User logged out successfully"));
+});
+
+// @ Desc: Refresh access token
+// @ route: POST api/v1/users/refresh-token
+// @ access: Public
+
+exports.refreshAccessToken = asyncHandler(async (req, res, next) => {
+        try {
+                // Get refresh token from cookies or body
+                const incomingRefreshToken = req?.cookies?.refreshToken || req.body.refreshToken;
+
+                if (!incomingRefreshToken) {
+                        throw new ApiError(401, "Refresh token is required");
+                }
+                //Verify the refresh token
+                const decodedToken = jwt.verify(incomingRefreshToken, appConfig.refreshTokenSecret);
+
+                //Find the user with ths refresh token
+                const user = await User.findById(decodedToken._id);
+                if (!user) {
+                        throw new ApiError(401, "Invalid refresh token");
+                }
+
+                if (incomingRefreshToken !== user.refreshToken) {
+                        throw new ApiError(401, "Refresh token is expired or used");
+                }
+                //Generate new tokens
+                const { accessToken, refreshToken: newRefreshToken } = await generateAccessAndRefreshToken(user?._id);
+                //Set cookies
+                const cookieOptions = {
+                        httpOnly: true,
+                        sameSite: "strict",
+                        secure: appConfig.nodeEnv === "production",
+                };
+
+                return res
+                        .status(200)
+                        .cookie("accessToken", accessToken, cookieOptions)
+                        .cookie("refreshToken", newRefreshToken, cookieOptions)
+                        .json(
+                                new ApiResponse(
+                                        200,
+                                        {
+                                                accessToken,
+                                                refreshToken: newRefreshToken,
+                                        },
+                                        "Access token refreshed successfully"
+                                )
+                        );
+        } catch (error) {
+                throw new ApiError(401, error?.message || "Invalid Refresh token");
+        }
+});
+
+// @ Desc: Change user password
+// @ route: POST api/v1/users/change-password
+// @ access: Private
+
+exports.changePassword = asyncHandler(async (req, res, next) => {
+        const { oldPassword, newPassword } = req.body;
+
+        if (!oldPassword || !newPassword) {
+                return next(new ApiError(400, "Old password and new password are required"));
+        }
+
+        const user = await User.findById(req.user._id);
+        if (!user) {
+                return next(new ApiError(404, "User not found"));
+        }
+
+        // Check if old password is correct
+        const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+        if (!isPasswordCorrect) {
+                return next(new ApiError(401, "Invalid old password"));
+        }
+
+        // Update password
+        user.password = newPassword;
+        user.refreshToken = null;
+        await user.save({ validateBeforeSave: false });
+
+        // Generate new tokens
+        const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
+
+        // Set cookies
+        const cookieOptions = {
+                httpOnly: true,
+                sameSite: "strict",
+                secure: appConfig.nodeEnv === "production",
+        };
+
+        // Send response
+        res.status(200)
+                .cookie("accessToken", accessToken, cookieOptions)
+                .cookie("refreshToken", refreshToken, cookieOptions)
+                .json(new ApiResponse(200, {}, "Password changed successfully"));
 });
