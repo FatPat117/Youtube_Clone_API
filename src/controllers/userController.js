@@ -73,3 +73,36 @@ exports.registerUser = asyncHandler(async (req, res, next) => {
         // send response
         res.status(201).json(new ApiResponse(201, createdUser, "User registered successfully"));
 });
+
+// @ Desc: Login a user
+// @ route: POST api/v1/users/login
+// @ access: Public
+
+exports.loginUser = asyncHandler(async (req, res, next) => {
+        const { email, password, userName } = req.body;
+
+        if (!email || !password) {
+                return next(new ApiError(400, "Email and password are required"));
+        }
+
+        // Check if user exists
+        const user = await User.findOne({ $or: [{ email }, { userName }] });
+        if (!user) {
+                return next(new ApiError(401, "User not found"));
+        }
+
+        // Check if password is correct
+        const isPasswordCorrect = await user.isPasswordCorrect(password);
+        if (!isPasswordCorrect) {
+                return next(new ApiError(401, "Invalid password"));
+        }
+
+        // Generate access token
+
+        // Get user with sensitive data
+
+        // Set cookies
+
+        // Send response
+        res.status(200).json(new ApiResponse(200, { user }, "Login successful"));
+});
