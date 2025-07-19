@@ -2,8 +2,9 @@ const express = require("express");
 const dotenv = require("dotenv");
 const connectDB = require("./config/db");
 const cookieParser = require("cookie-parser");
-
+const { errorHandler, notFound } = require("./middlewares/error");
 const userRouter = require("./routes/userRoutes");
+
 dotenv.config(); // Load env variables
 
 //  Express Init
@@ -18,6 +19,10 @@ app.use(cookieParser()); // Middleware to parse cookies
 
 // Routes
 app.use("/api/v1/users", userRouter);
+
+// Error handling middleware
+app.use(notFound);
+app.use(errorHandler);
 
 // Start the server
 const PORT = process.env.PORT || 5000;
