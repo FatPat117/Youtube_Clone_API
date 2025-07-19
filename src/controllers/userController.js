@@ -1,8 +1,28 @@
 const asyncHandler = require("../utils/asyncHandler");
 const ApiError = require("../utils/ApiError");
 const ApiResponse = require("../utils/ApiResponse");
+const appConfig = require("../config/appConfig");
 const { uploadToCloudinary } = require("../utils/cloudinary");
 const User = require("../models/User");
+
+//Function to generate access token
+const generateAccessAndRefreshToken = async (userId) => {
+        try {
+                const user = await User.findById(userId);
+                if (!user) {
+                        throw new ApiError(404, "User not found");
+                }
+                const accessToken = user.generateAccessToken();
+                const refreshToken = user.generateRefreshToken();
+
+                user.refreshToken = refreshToken;
+                await user.save({ validateBeforeSave: false });
+
+                return { accessToken, refreshToken };
+        } catch (error) {
+                throw new ApiError(500, "Failed to generate access and refresh token");
+        }
+};
 
 // @ Desc: Register a new user with optional avatar and cover image
 // @ route: POST api/v1/users/register
@@ -98,11 +118,45 @@ exports.loginUser = asyncHandler(async (req, res, next) => {
         }
 
         // Generate access token
+        const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
 
         // Get user with sensitive data
+        const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
 
         // Set cookies
+        const cookieOptions = {
+                httpOnly: true,
+                sameSite: "strict", // Prevent CSRF attacks
+                secure: appConfig.nodeEnv === "production",
+        };
 
         // Send response
-        res.status(200).json(new ApiResponse(200, { user }, "Login successful"));
+        res.status(200)
+                .cookie("accessToken", accessToken, cookieOptions)
+                .cookie("refreshToken", refreshToken, cookieOptions)
+                .json(new ApiResponse(200, { loggedInUser }, "Login successful"));
+});
+
+// @ Desc: Logout a user
+// @ route: POST api/v1/users/logout
+// @ access: Public
+
+exports.logoutUser = asyncHandler(async (req, res, next) => {
+        // Clear refresh token from database
+        const user = await User.findById(req.user._id);
+        if (!user) {
+                return next(new ApiError(404, "User not found"));
+        }
+        user.refreshToken = null;
+        await user.save({ validateBeforeSave: false });
+
+        // Clear cookies
+        const cookieOptions = {
+                httpOnly: true,
+                sameSite: "strict",
+                secure: appConfig.nodeEnv === "production",
+        };
+        res.clearCookie("accessToken", cookieOptions);
+        res.clearCookie("refreshToken", cookieOptions);
+        res.status(200).json(new ApiResponse(200, {}, "User logged out successfully"));
 });

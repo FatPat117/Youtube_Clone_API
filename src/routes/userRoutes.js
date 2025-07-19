@@ -14,4 +14,7 @@ router.post(
 );
 router.post("/login", userController.loginUser);
 
+// Private routes
+router.post("/logout", userController.logoutUser);
+
 module.exports = router;
