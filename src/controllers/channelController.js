@@ -13,7 +13,6 @@ const User = require("../models/User");
 
 exports.getChannelInfo = asyncHandler(async (req, res, next) => {
         const { username } = req.params;
-
         if (!username) {
                 return next(new ApiError(400, "Username is required"));
         }
@@ -36,7 +35,6 @@ exports.getChannelInfo = asyncHandler(async (req, res, next) => {
 exports.updateChannelInfo = asyncHandler(async (req, res, next) => {
         const { username } = req.params;
         const { channelDescription, channelTags, socialLinks } = req.body;
-
         const updatedData = {};
 
         if (channelDescription) updatedData.channelDescription = channelDescription;
@@ -70,4 +68,39 @@ exports.updateChannelInfo = asyncHandler(async (req, res, next) => {
                 "-password -refreshToken"
         );
         res.status(200).json(new ApiResponse(200, updatedUser, "Channel information updated successfully"));
+});
+
+// @Desc Update channel notification settings
+// @route PUT api/v1/channels/notifications
+// @access Private
+
+exports.updateNotificationSettings = asyncHandler(async (req, res, next) => {
+        const { emailNotifications, subscriptionActivity, commentActivity } = req.body;
+
+        const notificationSettings = {};
+
+        if (emailNotifications !== "undefined")
+                notificationSettings["notificationSettings.emailNotifications"] = emailNotifications;
+
+        if (subscriptionActivity !== "undefined")
+                notificationSettings["notificationSettings.subscriptionActivity"] = subscriptionActivity;
+
+        if (commentActivity !== "undefined")
+                notificationSettings["notificationSettings.commentActivity"] = commentActivity;
+
+        if (Object.keys(notificationSettings).length === 0) {
+                return next(new ApiError(400, "No valid notification settings provided"));
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+                req?.user?._id,
+                { $set: notificationSettings },
+                { new: true }
+        ).select("notificationSettings");
+
+        if (!updatedUser) {
+                return next(new ApiError(404, "User not found"));
+        }
+
+        res.status(200).json(new ApiResponse(200, updatedUser, "Notification settings updated successfully"));
 });

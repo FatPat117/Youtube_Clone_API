@@ -112,7 +112,6 @@ exports.registerUser = asyncHandler(async (req, res, next) => {
 
 exports.loginUser = asyncHandler(async (req, res, next) => {
         const { email, password, userName } = req.body;
-
         if (!email || !password) {
                 return next(new ApiError(400, "Email and password are required"));
         }

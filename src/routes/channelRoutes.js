@@ -11,6 +11,11 @@ router.get("/:username", channelController.getChannelInfo);
 router.use(verifyJWT);
 
 // Channel Customization Routes
-router.patch("/:username", upload.fields([{ name: "coverImage", maxCount: 1 }]), channelController.updateChannelInfo);
+router.patch(
+        "/update/:username",
+        upload.fields([{ name: "coverImage", maxCount: 1 }]),
+        channelController.updateChannelInfo
+);
+router.patch("/notifications", channelController.updateNotificationSettings);
 
 module.exports = router;
