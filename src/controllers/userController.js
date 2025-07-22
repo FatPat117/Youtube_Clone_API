@@ -2,7 +2,7 @@ const asyncHandler = require("../utils/asyncHandler");
 const ApiError = require("../utils/ApiError");
 const ApiResponse = require("../utils/ApiResponse");
 const appConfig = require("../config/appConfig");
-const { uploadToCloudinary } = require("../utils/cloudinary");
+const { uploadToCloudinary, deleteFromCloudinary } = require("../utils/cloudinary");
 const User = require("../models/User");
 
 //Function to generate access token
@@ -167,6 +167,8 @@ exports.logoutUser = asyncHandler(async (req, res, next) => {
                 httpOnly: true,
                 sameSite: "strict",
                 secure: appConfig.nodeEnv === "production",
+                path: "/",
+                expires: new Date(0),
         };
         res.clearCookie("accessToken", cookieOptions);
         res.clearCookie("refreshToken", cookieOptions);
@@ -300,4 +302,39 @@ exports.updateUserProfile = asyncHandler(async (req, res, next) => {
                 return next(new ApiError(404, "User not found"));
         }
         res.status(200).json(new ApiResponse(200, user, "User profile updated successfully"));
+});
+
+// @Desc : Upload user avatar
+// @route : POST api/v1/users/upload-avatar
+// @access : Private
+
+exports.uploadUserAvatar = asyncHandler(async (req, res, next) => {
+        const avatarPath = req?.file?.path;
+        if (!avatarPath) {
+                return next(new ApiError(400, "Avatar is required"));
+        }
+
+        // Get current user
+        const user = await User.findById(req.user._id);
+        if (!user) {
+                return next(new ApiError(404, "User not found"));
+        }
+
+        // Delete old avatar if exists
+        if (user?.avatar?.public_id) {
+                await deleteFromCloudinary(user.avatar.public_id);
+        }
+
+        // Upload avatar to cloudinary
+        const avatarUploadResult = await uploadToCloudinary(avatarPath, "youtube/avatars");
+        if (!avatarUploadResult) {
+                return next(new ApiError(500, "Failed to upload avatar"));
+        }
+
+        // Update user avatar
+        user.avatar = { public_id: avatarUploadResult.public_id, url: avatarUploadResult.secure_url };
+        await user.save({ validateBeforeSave: false });
+
+        const updatedUser = await User.findById(req.user._id).select("-password -refreshToken");
+        res.status(200).json(new ApiResponse(200, updatedUser, "Avatar uploaded successfully"));
 });

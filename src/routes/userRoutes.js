@@ -21,4 +21,7 @@ router.post("/logout", userController.logoutUser);
 router.patch("/change-password", userController.changePassword);
 router.get("/current-user", userController.getUserProfile);
 router.patch("/current-user", userController.updateUserProfile);
+
+// Avatar and cover image routes
+router.patch("/upload-avatar", upload.single("avatar"), userController.uploadUserAvatar);
 module.exports = router;
