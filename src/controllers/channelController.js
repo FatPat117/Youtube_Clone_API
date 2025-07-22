@@ -28,3 +28,46 @@ exports.getChannelInfo = asyncHandler(async (req, res, next) => {
 
         res.status(200).json(new ApiResponse(200, channel, "Channel information fetched successfully"));
 });
+
+// @ Desc: Update channel profile information and cover image
+// @ route: PUT api/v1/channels/:username
+// @ access: Private
+
+exports.updateChannelInfo = asyncHandler(async (req, res, next) => {
+        const { username } = req.params;
+        const { channelDescription, channelTags, socialLinks } = req.body;
+
+        const updatedData = {};
+
+        if (channelDescription) updatedData.channelDescription = channelDescription;
+        if (channelTags) updatedData.channelTags = Array.isArray(channelTags) ? channelTags : Array.from(channelTags);
+        if (socialLinks)
+                updatedData.socialLinks = typeof socialLinks === "object" ? socialLinks : JSON.parse(socialLinks);
+
+        // Update cover image if provided
+
+        if (req.files && req.files.coverImage && req.files.coverImage[0].path) {
+                const coverImagePath = req.files.coverImage[0].path;
+
+                // Delete old cover image if exists
+                const user = await User.findById(req?.user?._id);
+                if (user?.coverImage?.public_id) {
+                        await deleteFromCloudinary(user?.coverImage?.public_id);
+                }
+
+                const coverImageUploadResult = await uploadToCloudinary(coverImagePath, "youtube/cover-images");
+                if (!coverImageUploadResult) {
+                        return next(new ApiError(500, "Failed to upload cover image"));
+                }
+                updatedData.coverImage = {
+                        public_id: coverImageUploadResult.public_id,
+                        url: coverImageUploadResult.secure_url,
+                };
+        }
+
+        // Update the user
+        const updatedUser = await User.findByIdAndUpdate(req?.user?._id, updatedData, { new: true }).select(
+                "-password -refreshToken"
+        );
+        res.status(200).json(new ApiResponse(200, updatedUser, "Channel information updated successfully"));
+});
