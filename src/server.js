@@ -4,6 +4,7 @@ const connectDB = require("./config/db");
 const cookieParser = require("cookie-parser");
 const { errorHandler, notFound } = require("./middlewares/error");
 const userRouter = require("./routes/userRoutes");
+const channelRouter = require("./routes/channelRoutes");
 
 dotenv.config(); // Load env variables
 
@@ -19,6 +20,7 @@ app.use(cookieParser()); // Middleware to parse cookies
 
 // Routes
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/channels", channelRouter);
 
 // Error handling middleware
 app.use(notFound);
