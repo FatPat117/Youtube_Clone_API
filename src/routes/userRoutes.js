@@ -19,4 +19,5 @@ router.post("/refresh-token", userController.refreshAccessToken);
 router.use(verifyJWT);
 router.post("/logout", userController.logoutUser);
 router.patch("/change-password", userController.changePassword);
+router.get("/current-user", userController.getUserProfile);
 module.exports = router;

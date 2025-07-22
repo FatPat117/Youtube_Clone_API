@@ -268,3 +268,20 @@ exports.changePassword = asyncHandler(async (req, res, next) => {
                 .cookie("refreshToken", refreshToken, cookieOptions)
                 .json(new ApiResponse(200, {}, "Password changed successfully"));
 });
+
+// @ Desc: Get user profile
+// @ route: GET api/v1/users/current-user
+// @ access: Private
+
+exports.getUserProfile = asyncHandler(async (req, res, next) => {
+        const user = await User.findById(req.user._id);
+        if (!user) {
+                return next(new ApiError(404, "User not found"));
+        }
+
+        res.status(200).json(new ApiResponse(200, user, "User profile fetched successfully"));
+});
+
+// @ Desc: Update user profile
+// @ route: PUT api/v1/users/profile
+// @ access: Private
