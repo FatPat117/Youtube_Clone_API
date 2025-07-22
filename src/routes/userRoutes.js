@@ -24,4 +24,5 @@ router.patch("/current-user", userController.updateUserProfile);
 
 // Avatar and cover image routes
 router.patch("/upload-avatar", upload.single("avatar"), userController.uploadUserAvatar);
+router.patch("/upload-cover-image", upload.single("coverImage"), userController.uploadCoverImage);
 module.exports = router;

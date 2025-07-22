@@ -338,3 +338,41 @@ exports.uploadUserAvatar = asyncHandler(async (req, res, next) => {
         const updatedUser = await User.findById(req.user._id).select("-password -refreshToken");
         res.status(200).json(new ApiResponse(200, updatedUser, "Avatar uploaded successfully"));
 });
+
+// @Desc : Upload user coverImage
+// @route : POST api/v1/users/upload-cover-image
+// @access : Private
+
+exports.uploadCoverImage = asyncHandler(async (req, res, next) => {
+        const coverImagePath = req?.file?.path;
+        if (!coverImagePath) {
+                return next(new ApiError(400, "Cover image is required"));
+        }
+
+        // Get current user
+        const user = await User.findById(req.user._id);
+        if (!user) {
+                return next(new ApiError(404, "User not found"));
+        }
+
+        // Delete old cover image if exists
+        if (user?.coverImage?.public_id) {
+                await deleteFromCloudinary(user.coverImage.public_id);
+        }
+
+        // Upload cover image to cloudinary
+        const coverImageUploadResult = await uploadToCloudinary(coverImagePath, "youtube/cover-images");
+        if (!coverImageUploadResult) {
+                return next(new ApiError(500, "Failed to upload cover image"));
+        }
+        const updatedUser = await User.findByIdAndUpdate(req.user._id, {
+                $set: {
+                        coverImage: {
+                                public_id: coverImageUploadResult.public_id,
+                                url: coverImageUploadResult.secure_url,
+                        },
+                },
+        }).select("-password -refreshToken");
+
+        res.status(200).json(new ApiResponse(200, updatedUser, "Cover image uploaded successfully"));
+});
