@@ -20,4 +20,5 @@ router.use(verifyJWT);
 router.post("/logout", userController.logoutUser);
 router.patch("/change-password", userController.changePassword);
 router.get("/current-user", userController.getUserProfile);
+router.patch("/current-user", userController.updateUserProfile);
 module.exports = router;

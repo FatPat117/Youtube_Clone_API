@@ -274,7 +274,7 @@ exports.changePassword = asyncHandler(async (req, res, next) => {
 // @ access: Private
 
 exports.getUserProfile = asyncHandler(async (req, res, next) => {
-        const user = await User.findById(req.user._id);
+        const user = await User.findById(req.user._id).select("-password -refreshToken");
         if (!user) {
                 return next(new ApiError(404, "User not found"));
         }
@@ -285,3 +285,19 @@ exports.getUserProfile = asyncHandler(async (req, res, next) => {
 // @ Desc: Update user profile
 // @ route: PUT api/v1/users/profile
 // @ access: Private
+
+exports.updateUserProfile = asyncHandler(async (req, res, next) => {
+        const { fullName, email } = req.body;
+
+        if (!fullName && !email) {
+                return next(new ApiError(400, "Full name or email is required"));
+        }
+        const user = await User.findByIdAndUpdate(req.user._id, { $set: { fullName, email } }, { new: true }).select(
+                "-password -refreshToken"
+        );
+
+        if (!user) {
+                return next(new ApiError(404, "User not found"));
+        }
+        res.status(200).json(new ApiResponse(200, user, "User profile updated successfully"));
+});
