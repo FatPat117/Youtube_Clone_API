@@ -10,6 +10,7 @@ router.get("/", videoController.getAllVideos);
 router.use(verifyJWT);
 router.get("/:videoId", videoController.getVideo);
 router.patch("/:videoId", upload.single("thumbnail"), videoController.updateVideo);
+router.delete("/:videoId", videoController.deleteVideo);
 router.post("/", upload.fields([{ name: "videoFile" }, { name: "thumbnail" }]), videoController.uploadVideo);
 
 module.exports = router;

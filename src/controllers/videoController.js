@@ -249,3 +249,37 @@ exports.updateVideo = asyncHandler(async (req, res, next) => {
 
         res.status(200).json(new ApiResponse(200, updatedVideo, "Video updated successfully"));
 });
+
+// @Desc : Delete a video and its associated files
+// @route : DELETE /api/v1/videos/:videoId
+// @access : Private
+
+exports.deleteVideo = asyncHandler(async (req, res, next) => {
+        const { videoId } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(videoId)) {
+                return next(new ApiError(400, "Invalid video ID"));
+        }
+
+        // Check if video exists
+        const video = await Video.findOne({ _id: videoId, owner: req.user._id });
+
+        if (!video) {
+                return next(new ApiError(404, "Video not found or you don't have permission to delete it"));
+        }
+
+        // Delete video file from cloudinary
+        if (video.videoFile?.public_id) {
+                await deleteFromCloudinary(video.videoFile.public_id, "video");
+        }
+
+        // Delete thumbnail from cloudinary
+        if (video.thumbnail?.public_id) {
+                await deleteFromCloudinary(video.thumbnail.public_id, "image");
+        }
+
+        // Delete video from database
+        await Video.findByIdAndDelete(videoId);
+
+        res.status(200).json(new ApiResponse(200, null, "Video deleted successfully"));
+});
