@@ -319,3 +319,63 @@ exports.togglePublishStatus = asyncHandler(async (req, res, next) => {
                 )
         );
 });
+
+// @Desc : Generate share link for a video
+// @route : GET /api/v1/videos/share/:videoId
+// @access : Public
+
+exports.generateShareLink = asyncHandler(async (req, res, next) => {
+        const { videoId } = req.params;
+        let { platform = "general" } = req.query;
+
+        if (!mongoose.Types.ObjectId.isValid(videoId)) {
+                return next(new ApiError(400, "Invalid video ID"));
+        }
+
+        // Check if video exists and published
+        const video = await Video.findOne({ _id: videoId, isPublished: true });
+
+        if (!video) {
+                return next(new ApiError(404, "Video not found or not published"));
+        }
+
+        // Generate share link
+        const baseUrl = `${req.protocol}://${req.get("host")}`;
+        const videoUrl = `${baseUrl}/api/v1/videos/${videoId}`;
+
+        // Generate share link based on platform
+        let shareLink = { directLink: videoUrl, clipboard: videoUrl };
+        platform = platform.toLowerCase();
+        if (platform === "facebook") {
+                shareLink.facebook = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(videoUrl)}`;
+        } else if (platform === "x") {
+                shareLink.x = `https://x.com/intent/tweet?url=${encodeURIComponent(videoUrl)}`;
+        } else if (platform === "linkedin") {
+                shareLink.linkedin = `https://www.linkedin.com/shareArticle?url=${encodeURIComponent(videoUrl)}`;
+        } else if (platform === "telegram") {
+                shareLink.telegram = `https://telegram.me/share/url?url=${encodeURIComponent(videoUrl)}`;
+        } else if (platform === "whatsapp") {
+                shareLink.whatsapp = `https://wa.me/?text=${encodeURIComponent(videoUrl)}`;
+        } else if (platform === "email") {
+                shareLink.email = `mailto:?subject=Check out this video&body=${encodeURIComponent(videoUrl)}`;
+        } else if (platform === "sms") {
+                shareLink.sms = `sms:?body=${encodeURIComponent(videoUrl)}`;
+        } else {
+                shareLink = {
+                        ...shareLink,
+                        general: videoUrl,
+                        facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(videoUrl)}`,
+                        x: `https://x.com/intent/tweet?url=${encodeURIComponent(videoUrl)}`,
+                        linkedin: `https://www.linkedin.com/shareArticle?url=${encodeURIComponent(videoUrl)}`,
+                        telegram: `https://telegram.me/share/url?url=${encodeURIComponent(videoUrl)}`,
+                        whatsapp: `https://wa.me/?text=${encodeURIComponent(videoUrl)}`,
+                        email: `mailto:?subject=Check out this video&body=${encodeURIComponent(videoUrl)}`,
+                        sms: `sms:?body=${encodeURIComponent(videoUrl)}`,
+                };
+        }
+
+        // Increment share count
+        const updatedVideo = await Video.findByIdAndUpdate(videoId, { $inc: { shares: 1 } }, { new: true });
+
+        res.status(200).json(new ApiResponse(200, { updatedVideo, shareLink }, "Share link generated successfully"));
+});

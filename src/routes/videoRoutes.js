@@ -5,7 +5,7 @@ const router = express.Router();
 const videoController = require("../controllers/videoController");
 // Public routes
 router.get("/", videoController.getAllVideos);
-
+router.get("/share/:videoId", videoController.generateShareLink);
 // Protected routes
 router.use(verifyJWT);
 router.get("/:videoId", videoController.getVideo);
