@@ -4,6 +4,7 @@ const upload = require("../middlewares/multer");
 const router = express.Router();
 const videoController = require("../controllers/videoController");
 // Public routes
+router.get("/", videoController.getAllVideos);
 
 // Protected routes
 router.use(verifyJWT);
