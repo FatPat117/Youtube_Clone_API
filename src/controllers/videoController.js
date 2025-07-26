@@ -261,7 +261,7 @@ exports.deleteVideo = asyncHandler(async (req, res, next) => {
                 return next(new ApiError(400, "Invalid video ID"));
         }
 
-        // Check if video exists
+        // Check if video exists and belongs to the user
         const video = await Video.findOne({ _id: videoId, owner: req.user._id });
 
         if (!video) {
@@ -282,4 +282,40 @@ exports.deleteVideo = asyncHandler(async (req, res, next) => {
         await Video.findByIdAndDelete(videoId);
 
         res.status(200).json(new ApiResponse(200, null, "Video deleted successfully"));
+});
+
+// @Desc: Toggle video publish status
+// @route: PATCH /api/v1/videos/toggle-publish/:videoId
+// @access: Private
+
+exports.togglePublishStatus = asyncHandler(async (req, res, next) => {
+        const { videoId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(videoId)) {
+                return next(new ApiError(400, "Invalid video ID"));
+        }
+
+        // Check if video exists and belongs to the user
+        const video = await Video.findOne({ _id: videoId, owner: req.user._id });
+
+        if (!video) {
+                return next(new ApiError(404, "Video not found or you don't have permission to update it"));
+        }
+
+        // Toggle publish status
+        const updatedVideo = await Video.findByIdAndUpdate(
+                videoId,
+                { isPublished: !video.isPublished },
+                { new: true }
+        ).populate({
+                path: "owner",
+                select: "avatar userName email",
+        });
+
+        res.status(200).json(
+                new ApiResponse(
+                        200,
+                        updatedVideo,
+                        `Video ${updatedVideo.isPublished ? "published" : "unpublished"} successfully`
+                )
+        );
 });

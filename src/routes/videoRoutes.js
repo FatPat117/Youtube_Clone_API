@@ -12,5 +12,6 @@ router.get("/:videoId", videoController.getVideo);
 router.patch("/:videoId", upload.single("thumbnail"), videoController.updateVideo);
 router.delete("/:videoId", videoController.deleteVideo);
 router.post("/", upload.fields([{ name: "videoFile" }, { name: "thumbnail" }]), videoController.uploadVideo);
+router.patch("/toggle-publish/:videoId", videoController.togglePublishStatus);
 
 module.exports = router;
