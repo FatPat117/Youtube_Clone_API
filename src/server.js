@@ -6,7 +6,7 @@ const { errorHandler, notFound } = require("./middlewares/error");
 const userRouter = require("./routes/userRoutes");
 const channelRouter = require("./routes/channelRoutes");
 const videoRouter = require("./routes/videoRoutes");
-
+const notificationRouter = require("./routes/notificationRoutes");
 dotenv.config(); // Load env variables
 
 //  Express Init
@@ -23,7 +23,7 @@ app.use(cookieParser()); // Middleware to parse cookies
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/channels", channelRouter);
 app.use("/api/v1/videos", videoRouter);
-
+app.use("/api/v1/notifications", notificationRouter);
 // Error handling middleware
 app.use(notFound);
 app.use(errorHandler);
