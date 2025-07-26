@@ -191,3 +191,61 @@ exports.getVideo = asyncHandler(async (req, res, next) => {
 
         res.status(200).json(new ApiResponse(200, video, "Video fetched successfully"));
 });
+
+// @Desc Update a video
+// @route : PATCH /api/v1/videos/:videoId
+// @access : Private
+
+exports.updateVideo = asyncHandler(async (req, res, next) => {
+        const { videoId } = req.params;
+        const { title, description, category, tags, isPublished } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(videoId)) {
+                return next(new ApiError(400, "Invalid video ID"));
+        }
+
+        // Check if video exists
+        const video = await Video.findOne({ _id: videoId, owner: req.user._id });
+
+        if (!video) {
+                return next(new ApiError(404, "Video not found or you don't have permission to update it"));
+        }
+
+        // Upload thumbnail
+        let updatedThumbnail = {};
+        if (req.file && req.file.path) {
+                const thumbnailLocalPath = req.file.path;
+                // Delete old thumbnail
+                if (video.thumbnail?.public_id) {
+                        await deleteFromCloudinary(video.thumbnail.public_id, "image");
+                }
+                // Upload new thumbnail
+                const thumbnailResult = await uploadToCloudinary(thumbnailLocalPath, "youtube/thumbnails");
+                if (!thumbnailResult) {
+                        return next(new ApiError(500, "Failed to upload thumbnail"));
+                }
+                updatedThumbnail = {
+                        public_id: thumbnailResult.public_id,
+                        url: thumbnailResult.secure_url,
+                };
+        }
+
+        // Update video details
+        const updatedVideo = await Video.findByIdAndUpdate(
+                videoId,
+                {
+                        title: title || video.title,
+                        description: description || video.description,
+                        category: category || video.category,
+                        tags: tags ? JSON.parse(tags) : video.tags,
+                        isPublished: isPublished !== undefined ? isPublished : video.isPublished,
+                        ...updatedThumbnail,
+                },
+                { new: true }
+        ).populate({
+                path: "owner",
+                select: "avatar userName email",
+        });
+
+        res.status(200).json(new ApiResponse(200, updatedVideo, "Video updated successfully"));
+});
