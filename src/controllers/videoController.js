@@ -100,7 +100,7 @@ exports.getAllVideos = asyncHandler(async (req, res, next) => {
                         $lookup: {
                                 from: "users",
                                 localField: "owner",
-                                foreignField: "_ id",
+                                foreignField: "_id",
                                 as: "owner",
                                 pipeline: [
                                         {
@@ -155,4 +155,39 @@ exports.getAllVideos = asyncHandler(async (req, res, next) => {
                         "Videos fetched successfully"
                 )
         );
+});
+
+// @Desc : Get a single video
+// @route : GET /api/v1/videos/:videoId
+// @access : Public
+
+exports.getVideo = asyncHandler(async (req, res, next) => {
+        const { videoId } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(videoId)) {
+                return next(new ApiError(400, "Invalid video ID"));
+        }
+
+        // Find the video and update views
+        const video = await Video.findByIdAndUpdate(videoId, { $inc: { views: 1 } }, { new: true }).populate({
+                path: "owner",
+                select: "userName email avatar",
+        });
+
+        if (!video) {
+                return next(new ApiError(404, "Video not found"));
+        }
+
+        // Add the video to user history
+        if (req.user) {
+                await User.findByIdAndUpdate(
+                        req.user._id,
+                        {
+                                $addToSet: { watchHistory: videoId },
+                        },
+                        { new: true }
+                );
+        }
+
+        res.status(200).json(new ApiResponse(200, video, "Video fetched successfully"));
 });

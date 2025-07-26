@@ -8,6 +8,7 @@ router.get("/", videoController.getAllVideos);
 
 // Protected routes
 router.use(verifyJWT);
+router.get("/:videoId", videoController.getVideo);
 router.post("/", upload.fields([{ name: "videoFile" }, { name: "thumbnail" }]), videoController.uploadVideo);
 
 module.exports = router;
