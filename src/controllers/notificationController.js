@@ -3,6 +3,7 @@ const ApiError = require("../utils/ApiError");
 const ApiResponse = require("../utils/ApiResponse");
 const Notification = require("../models/Notification");
 const User = require("../models/User");
+const mongoose = require("mongoose");
 
 // Function to create a new notification
 const createNotification = async (recipientId, senderId, type, content) => {
@@ -38,9 +39,76 @@ const createNotification = async (recipientId, senderId, type, content) => {
 };
 
 // @Desc : Get users notifications with pagination and filtering
-// @route : GET /api/v1/notifications
+// @route : GET /api/v1/notifications?page=1&limit=10&unreadOnly=false
 // @access : Private
-exports.getUserNotifications = asyncHandler(async (req, res, next) => {});
+exports.getUserNotifications = asyncHandler(async (req, res, next) => {
+        const { page = 1, limit = 10, unreadOnly = false } = req.query;
+
+        const matchStage = {
+                recipient: new mongoose.Types.ObjectId(req.user._id),
+        };
+
+        if (unreadOnly) {
+                matchStage.isRead = false;
+        }
+
+        const notifications = await Notification.aggregate([
+                { $match: matchStage },
+                {
+                        //  Lookup sender user
+                        $lookup: {
+                                from: "users",
+                                localField: "sender",
+                                foreignField: "_id",
+                                as: "sender",
+                                pipeline: [
+                                        {
+                                                $project: {
+                                                        fullName: 1,
+                                                        userName: 1,
+                                                        profileImage: 1,
+                                                },
+                                        },
+                                ],
+                        },
+                },
+                {
+                        //  Add sender user to the notification
+                        $addFields: {
+                                sender: { $first: "sender" },
+                        },
+                },
+                {
+                        $sort: { createdAt: -1 },
+                },
+                {
+                        $skip: (Number(page) - 1) * Number(limit),
+                },
+        ]);
+
+        const unreadCount = await Notification.countDocuments({
+                recipient: new mongoose.Types.ObjectId(req.user._id),
+                isRead: false,
+        });
+
+        const totalCount = await Notification.countDocuments({
+                recipient: new mongoose.Types.ObjectId(req.user._id),
+        });
+
+        res.status(200).json(
+                new ApiResponse(
+                        200,
+                        {
+                                notifications,
+                                unreadCount,
+                                totalCount,
+                                currentPage: Number(page),
+                                totalPages: Math.ceil(totalCount / Number(limit)),
+                        },
+                        "Notifications fetched successfully"
+                )
+        );
+});
 
 // @Desc Mark a single notification as read
 // @route : PATCH /api/v1/notifications/read/:notificationId
