@@ -9,7 +9,7 @@ const router = express.Router();
 router.use(verifyJWT);
 router.get("/", notificationController.getUserNotifications);
 
-router.patch("/read/:notificationId", notificationController.markNotificationAsRead);
+router.patch("/:notificationId", notificationController.markNotificationAsRead);
 
 router.patch("/all-read", notificationController.markAllNotificationsAsRead);
 
