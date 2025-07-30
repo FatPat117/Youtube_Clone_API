@@ -5,7 +5,7 @@ const Notification = require("../models/Notification");
 const User = require("../models/User");
 const mongoose = require("mongoose");
 
-// Function to create a new notification
+// Internal utility function to create a new notification
 const createNotification = async (recipientId, senderId, type, content) => {
         try {
                 //  Check if recipient has enabled notifications for this type
@@ -75,7 +75,7 @@ exports.getUserNotifications = asyncHandler(async (req, res, next) => {
                 {
                         //  Add sender user to the notification
                         $addFields: {
-                                sender: { $first: "sender" },
+                                sender: { $first: "$sender" },
                         },
                 },
                 {
@@ -124,6 +124,3 @@ exports.markAllNotificationsAsRead = asyncHandler(async (req, res, next) => {});
 // @route : DELETE /api/v1/notifications/:notificationId
 // @access : Private
 exports.deleteNotification = asyncHandler(async (req, res, next) => {});
-
-// Internal utility function to create a new notification
-const createNotification = asyncHandler(async (req, res, next) => {});
