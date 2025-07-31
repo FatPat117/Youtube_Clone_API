@@ -5,9 +5,9 @@ const verifyJWT = require("../middlewares/authentication");
 const router = express.Router();
 
 //  Public
-router.get("/:userId/playlist", playlistController.getUserPlaylists);
 // Private
 router.use(verifyJWT);
+router.get("/user/:userId/playlists", playlistController.getUserPlaylists);
 router.post("/", playlistController.createPlaylist);
 
 //Add Video to Playlist

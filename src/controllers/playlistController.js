@@ -28,8 +28,7 @@ exports.createPlaylist = asyncHandler(async (req, res, next) => {
 // @route : POST /api/v1/playlists/:playlistId/videos/:videoId
 // @access : Private
 exports.addVideoToPlaylist = asyncHandler(async (req, res, next) => {
-        const { playlistId } = req.params;
-        const { videoId } = req.body;
+        const { playlistId, videoId } = req.params;
 
         if (!playlistId || !videoId) {
                 throw new ApiError(400, "Playlist ID and Video ID are required");
@@ -70,9 +69,44 @@ exports.removeVideoFromPlaylist = asyncHandler(async (req, res, next) => {
 });
 
 // @Desc : Get user's playlists with videos info
-// @route : GET /api/v1/users/:userId/playlist
+// @route : GET /api/v1/users/:userId/playlists
 // @Access: Public
-exports.getUserPlaylists = asyncHandler(async (req, res, next) => {});
+exports.getUserPlaylists = asyncHandler(async (req, res, next) => {
+        const { userId } = req.params;
+        const userIdToUse = userId || req.user._id;
+
+        if (!userIdToUse) {
+                throw new ApiError(400, "userId is required");
+        }
+
+        const isOwner = req?.user._id.toString() === userIdToUse.toString();
+
+        let playlistsObj;
+        // if not the owner, only return public playlist
+        if (!isOwner) {
+                const playlists = await Playlist.find({ owner: userIdToUse, isPublic: true })
+                        .sort({ createdAt: -1 })
+                        .populate({
+                                path: "videos",
+                                select: "_id title thumbnail duration videoFile views createdAt",
+                        });
+                playlistsObj = {
+                        playlists,
+                        total: playlists.length,
+                };
+        } else {
+                const playlists = await Playlist.find({ owner: userIdToUse }).sort({ createdAt: -1 }).populate({
+                        path: "videos",
+                        select: "_id title thumbnail duration videoFile views createdAt",
+                });
+                playlistsObj = {
+                        playlists,
+                        total: playlists.length,
+                };
+        }
+
+        return res.status(200).json(new ApiResponse(200, { playlistsObj }, "Get user's playlists successfully"));
+});
 
 // @Desc : Get detailed information about a specific playlist
 // @route : GET /api/v1/playlists/:playlistId
