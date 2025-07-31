@@ -151,4 +151,19 @@ exports.markAllNotificationsAsRead = asyncHandler(async (req, res, next) => {
 // @Desc : Delete a notification
 // @route : DELETE /api/v1/notifications/:notificationId
 // @access : Private
-exports.deleteNotification = asyncHandler(async (req, res, next) => {});
+exports.deleteNotification = asyncHandler(async (req, res, next) => {
+        const { notificationId } = req.params;
+        if (!notificationId) {
+                throw new ApiError(400, "Notification ID is required");
+        }
+        if (!mongoose.Types.ObjectId.isValid(notificationId)) {
+                throw new ApiError(400, "Invalid notification ID");
+        }
+
+        const notification = await Notification.findByIdAndDelete({ _id: notificationId, recipient: req.user._id });
+
+        if (!notification) {
+                throw new ApiError(404, "Notification not found");
+        }
+        return res.status(200).json(new ApiResponse(200, {}, "Notification deleted successfully"));
+});
