@@ -8,10 +8,8 @@ const router = express.Router();
 // Protected routes
 router.use(verifyJWT);
 router.get("/", notificationController.getUserNotifications);
-
-router.patch("/:notificationId", notificationController.markNotificationAsRead);
-
 router.patch("/all-read", notificationController.markAllNotificationsAsRead);
+router.patch("/:notificationId", notificationController.markNotificationAsRead);
 
 router.delete("/:notificationId", notificationController.deleteNotification);
 

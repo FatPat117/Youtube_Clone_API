@@ -139,7 +139,14 @@ exports.markNotificationAsRead = asyncHandler(async (req, res, next) => {
 // @Desc Mark all notifications as read
 // @route : PATCH /api/v1/notifications/all-read
 // @access : Private
-exports.markAllNotificationsAsRead = asyncHandler(async (req, res, next) => {});
+exports.markAllNotificationsAsRead = asyncHandler(async (req, res, next) => {
+        await Notification.updateMany(
+                { recipient: req.user._id, isRead: false },
+                { $set: { isRead: true } },
+                { new: true }
+        );
+        return res.status(200).json(new ApiResponse(200, {}, "All notifications marked as read"));
+});
 
 // @Desc : Delete a notification
 // @route : DELETE /api/v1/notifications/:notificationId
