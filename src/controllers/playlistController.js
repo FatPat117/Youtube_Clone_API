@@ -65,7 +65,35 @@ exports.addVideoToPlaylist = asyncHandler(async (req, res, next) => {
 // @route : DELETE /api/v1/playlists/:playlistId/videos/:videoId
 // @access : Private
 exports.removeVideoFromPlaylist = asyncHandler(async (req, res, next) => {
-        const { title, description, isPublic } = req.body;
+        const { playlistId, videoId } = req.params;
+        if (!playlistId || !videoId) {
+                throw new ApiError(400, "Playlist ID and Video ID are required");
+        }
+
+        // Check if playlist exists and belong to current user
+        const playlist = await Playlist.findOne({
+                _id: playlistId,
+                owner: req.user._id,
+        });
+
+        if (!playlist) {
+                throw new ApiError(404, "Playlist not found or you don't have permission to access it");
+        }
+
+        // Check if video exists in playlist
+        const isVideoInPlaylist = playlist.videos.includes(videoId);
+        if (!isVideoInPlaylist) {
+                throw new ApiError(400, "Video not found in playlist");
+        }
+
+        // Remove video from playlist
+        const updatedPlaylist = await Playlist.findByIdAndUpdate(
+                playlistId,
+                { $pull: { videos: videoId } },
+                { new: true }
+        );
+
+        return res.status(200).json(new ApiResponse(200, updatedPlaylist, "Video removed from playlist successfully"));
 });
 
 // @Desc : Get user's playlists with videos info
@@ -201,8 +229,40 @@ exports.getPlaylistById = asyncHandler(async (req, res, next) => {
 
 // @Desc : Update a playlist (name,description,privacy)
 // @route : PATCH /api/v1/playlists/:playlistId
-// @Access: Public
-exports.updatePlaylist = asyncHandler(async (req, res, next) => {});
+// @Access: Private
+exports.updatePlaylist = asyncHandler(async (req, res, next) => {
+        const { playlistId } = req.params;
+        const { name, description, isPublic } = req.body;
+        if (!playlistId) {
+                throw new ApiError(400, "PlaylistId is required");
+        }
+
+        if ((!name || !name.trim()) && (!description || !description.trim()) && isPublic === undefined) {
+                throw new ApiError(400, "Name, description, or isPublic is required");
+        }
+
+        const playlist = await Playlist.findOne({ _id: playlistId, owner: req.user._id });
+
+        if (!playlist) {
+                throw new ApiError(404, "Playlist not found or you don't have permission to access it");
+        }
+
+        if (name) {
+                playlist.name = name;
+        }
+
+        if (description) {
+                playlist.description = description;
+        }
+
+        if (isPublic !== undefined) {
+                playlist.isPublic = isPublic;
+        }
+
+        await playlist.save();
+
+        return res.status(200).json(new ApiResponse(200, playlist, "Playlist updated successfully"));
+});
 
 // @Desc : Delete a Playlist
 // @route: DELETE /api/v1/playlist/:playlistId
