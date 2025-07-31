@@ -28,7 +28,38 @@ exports.createPlaylist = asyncHandler(async (req, res, next) => {
 // @route : POST /api/v1/playlists/:playlistId/videos/:videoId
 // @access : Private
 exports.addVideoToPlaylist = asyncHandler(async (req, res, next) => {
-        const { title, description, isPublic } = req.body;
+        const { playlistId } = req.params;
+        const { videoId } = req.body;
+
+        if (!playlistId || !videoId) {
+                throw new ApiError(400, "Playlist ID and Video ID are required");
+        }
+
+        // Check if playlist exists and belong to current user
+        const playlist = await Playlist.findOne({
+                _id: playlistId,
+                owner: req.user._id,
+        });
+
+        if (!playlist) {
+                throw new ApiError(404, "Playlist not found or you don't have permission to access it");
+        }
+
+        // Check if video already in playlist
+        const isVideoInPlaylist = playlist.videos.includes(videoId);
+
+        if (isVideoInPlaylist) {
+                throw new ApiError(400, "Video already in playlist");
+        }
+
+        // Add video to playlist
+        const updatedPlaylist = await Playlist.findByIdAndUpdate(
+                playlistId,
+                { $push: { videos: videoId } },
+                { new: true }
+        );
+
+        return res.status(200).json(new ApiResponse(200, playlist, "Video added to playlist successfully"));
 });
 
 // @Desc : Remove a video from a playlist
