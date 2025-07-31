@@ -7,6 +7,7 @@ const userRouter = require("./routes/userRoutes");
 const channelRouter = require("./routes/channelRoutes");
 const videoRouter = require("./routes/videoRoutes");
 const notificationRouter = require("./routes/notificationRoutes");
+const playlistRouter = require("./routes/playlistRoutes");
 dotenv.config(); // Load env variables
 
 //  Express Init
@@ -24,6 +25,7 @@ app.use("/api/v1/users", userRouter);
 app.use("/api/v1/channels", channelRouter);
 app.use("/api/v1/videos", videoRouter);
 app.use("/api/v1/notifications", notificationRouter);
+app.use("/api/v1/playlists", playlistRouter);
 // Error handling middleware
 app.use(notFound);
 app.use(errorHandler);
