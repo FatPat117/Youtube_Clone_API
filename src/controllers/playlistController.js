@@ -2,7 +2,7 @@ const asyncHandler = require("../utils/asyncHandler");
 const Playlist = require("../models/Playlist.js");
 const ApiError = require("../utils/ApiError");
 const ApiResponse = require("../utils/ApiResponse");
-
+const mongoose = require("mongoose");
 // @Desc : Create a new playlist
 // @route : POST /api/v1/playlists
 // @access : Private
@@ -111,7 +111,93 @@ exports.getUserPlaylists = asyncHandler(async (req, res, next) => {
 // @Desc : Get detailed information about a specific playlist
 // @route : GET /api/v1/playlists/:playlistId
 // @Access: Public
-exports.getPlaylistById = asyncHandler(async (req, res, next) => {});
+exports.getPlaylistById = asyncHandler(async (req, res, next) => {
+        const { playlistId } = req.params;
+        if (!playlistId) {
+                throw new ApiError(400, "playlistId is required");
+        }
+
+        const playlist = await Playlist.aggregate([
+                { $match: { _id: new mongoose.Types.ObjectId(playlistId) } },
+                {
+                        $lookup: {
+                                from: "users",
+                                localField: "owner",
+                                foreignField: "_id",
+                                as: "owner",
+                                pipeline: [
+                                        {
+                                                $project: {
+                                                        userName: 1,
+                                                        fullName: 1,
+                                                        avatar: 1,
+                                                },
+                                        },
+                                ],
+                        },
+                },
+                {
+                        $lookup: {
+                                from: "videos",
+                                localField: "videos",
+                                foreignField: "_id",
+                                as: "video",
+                                pipeline: [
+                                        {
+                                                $project: {
+                                                        videoFile: 1,
+                                                        title: 1,
+                                                        thumbnail: 1,
+                                                        duration: 1,
+                                                        views: 1,
+                                                },
+                                        },
+                                        {
+                                                $lookup: {
+                                                        from: "users",
+                                                        localField: "owner",
+                                                        foreignField: "_id",
+                                                        as: "owner",
+                                                        pipeline: [
+                                                                {
+                                                                        $project: {
+                                                                                userName: 1,
+                                                                                fullName: 1,
+                                                                                avatar: 1,
+                                                                        },
+                                                                },
+                                                                {
+                                                                        $addFields: {
+                                                                                owner: { $first: "$owner" },
+                                                                        },
+                                                                },
+                                                        ],
+                                                },
+                                        },
+                                ],
+                        },
+                },
+                {
+                        $addFields: {
+                                owner: { $first: "$owner" },
+                                videoCount: { $size: "$video" },
+                        },
+                },
+        ]);
+        if (!playlist.length) {
+                throw new ApiError(404, "Playlist not found");
+        }
+        const playlistData = playlist[0];
+
+        //  Check if the playlist is public or not
+        if (!playlistData.isPublic) {
+                if (!req.user || req.user._id.toString() !== playlistData.owner._id.toString()) {
+                        throw new ApiError(403, "You are not authorized to access this playlist");
+                }
+        }
+
+        return res.status(200).json(new ApiResponse(200, playlistData, "Get playlist successfully"));
+});
 
 // @Desc : Update a playlist (name,description,privacy)
 // @route : PATCH /api/v1/playlists/:playlistId
