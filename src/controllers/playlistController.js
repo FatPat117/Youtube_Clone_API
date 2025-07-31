@@ -268,4 +268,19 @@ exports.updatePlaylist = asyncHandler(async (req, res, next) => {
 // @route: DELETE /api/v1/playlist/:playlistId
 // @Access : Private
 
-exports.deletePlaylist = asyncHandler(async (req, res, next) => {});
+exports.deletePlaylist = asyncHandler(async (req, res, next) => {
+        const { playlistId } = req.params;
+        if (!playlistId) {
+                throw new ApiError(400, "PlaylistId is required");
+        }
+
+        const playlist = await Playlist.findOne({ _id: playlistId, owner: req.user._id });
+
+        if (!playlist) {
+                throw new ApiError(404, "Playlist not found or you don't have permission to access it");
+        }
+
+        await Playlist.findByIdAndDelete(playlistId);
+
+        return res.status(200).json(new ApiResponse(200, null, "Playlist deleted successfully"));
+});
