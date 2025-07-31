@@ -113,7 +113,28 @@ exports.getUserNotifications = asyncHandler(async (req, res, next) => {
 // @Desc Mark a single notification as read
 // @route : PATCH /api/v1/notifications/read/:notificationId
 // @access : Private
-exports.markNotificationAsRead = asyncHandler(async (req, res, next) => {});
+exports.markNotificationAsRead = asyncHandler(async (req, res, next) => {
+        const { notificationId } = req.params;
+
+        if (!notificationId) {
+                throw new ApiError(400, "Notification ID is required");
+        }
+        if (!mongoose.Types.ObjectId.isValid(notificationId)) {
+                throw new ApiError(400, "Invalid notification ID");
+        }
+
+        const notification = await Notification.findByIdAndUpdate(
+                { _id: notificationId, recipient: req.user._id },
+                { $set: { isRead: true } },
+                { new: true }
+        );
+
+        if (!notification) {
+                throw new ApiError(404, "Notification not found");
+        }
+
+        return res.status(200).json(new ApiResponse(200, notification, "Notification marked as read"));
+});
 
 // @Desc Mark all notifications as read
 // @route : PATCH /api/v1/notifications/all-read
