@@ -1,5 +1,5 @@
-const asyncHandler = required("../utils/asyncHandler");
-const Playlist = required("../models/Playlist.js");
+const asyncHandler = require("../utils/asyncHandler");
+const Playlist = require("../models/Playlist.js");
 const ApiError = require("../utils/ApiError");
 const ApiResponse = require("../utils/ApiResponse");
 
@@ -7,7 +7,21 @@ const ApiResponse = require("../utils/ApiResponse");
 // @route : POST /api/v1/playlists
 // @access : Private
 exports.createPlaylist = asyncHandler(async (req, res, next) => {
-        const { title, description, isPublic } = req.body;
+        const { name, description, isPublic = true } = req.body;
+
+        if (!name || !name.trim()) {
+                throw new ApiError(400, "Name of Playlist is required");
+        }
+
+        // Create playlist
+        const playlist = await Playlist.create({
+                name,
+                description: description || "",
+                isPublic: Boolean(isPublic),
+                owner: req.user._id,
+        });
+
+        return res.status(201).json(new ApiResponse(201, playlist, "Create a new playlist successfully"));
 });
 
 // @Desc : Add a video to a playlist

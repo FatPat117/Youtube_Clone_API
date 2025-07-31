@@ -1,6 +1,6 @@
-const express = required("express");
-const playlistController = required("../controllers/playlistController");
-const { verifyJWT } = required("../middlewares/authentication");
+const express = require("express");
+const playlistController = require("../controllers/playlistController");
+const verifyJWT = require("../middlewares/authentication");
 
 const router = express.Router();
 
@@ -8,7 +8,7 @@ const router = express.Router();
 router.get("/:userId/playlist", playlistController.getUserPlaylists);
 // Private
 router.use(verifyJWT);
-router.put("/", playlistController.createPlaylist);
+router.post("/", playlistController.createPlaylist);
 
 //Add Video to Playlist
 router.post("/:playlistId/videos/:videoId", playlistController.addVideoToPlaylist);
@@ -25,4 +25,4 @@ router.patch("/:playlistId", playlistController.updatePlaylist);
 // Delete a playlist
 router.delete("/:playlistId", playlistController.deletePlaylist);
 
-module.export = router;
+module.exports = router;
