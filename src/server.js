@@ -26,6 +26,7 @@ app.use("/api/v1/channels", channelRouter);
 app.use("/api/v1/videos", videoRouter);
 app.use("/api/v1/notifications", notificationRouter);
 app.use("/api/v1/playlists", playlistRouter);
+app.use("/api/v1/likes", likeRouter);
 // Error handling middleware
 app.use(notFound);
 app.use(errorHandler);
