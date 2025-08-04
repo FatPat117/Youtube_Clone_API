@@ -8,6 +8,7 @@ const channelRouter = require("./routes/channelRoutes");
 const videoRouter = require("./routes/videoRoutes");
 const notificationRouter = require("./routes/notificationRoutes");
 const playlistRouter = require("./routes/playlistRoutes");
+const likeRouter = require("./routes/likeRoutes");
 dotenv.config(); // Load env variables
 
 //  Express Init

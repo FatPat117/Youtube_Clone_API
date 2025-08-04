@@ -11,16 +11,37 @@ const User = require("../models/User");
 // @access: Private
 exports.toggleLikeVideo = asyncHandler(async (req, res, next) => {
         const { videoId } = req.params;
-        const { userId } = req.user;
+        const userId = req.user._id;
+
+        if (!videoId) {
+                throw new ApiError(400, "Video ID is required");
+        }
+
+        const video = await Video.findById(videoId);
+        if (!video) {
+                throw new ApiError(404, "Video not found");
+        }
+
+        // Check if already liked
+        const existingLike = await Like.findOne({ video: videoId, likedBy: userId });
+        if (existingLike) {
+                // UnLike
+                await Like.findByIdAndDelete(existingLike._id);
+                return res.status(200).json(new ApiResponse(200, null, "Unlike video successfully"));
+        }
+
+        //   Like video
+        const likeVideos = await Like.create({
+                video: videoId,
+                likedBy: userId,
+        });
+        return res.status(200).json(new ApiError(200, likeVideos, "Liked video successfully"));
 });
 
 // @Desc: Toggle like/unlike on a comment
 // @route: POST /api/v1/likes/comment/:commentId
 // @access: Private
-exports.toggleLikeComment = asyncHandler(async (req, res, next) => {
-        const { videoId } = req.params;
-        const { userId } = req.user;
-});
+exports.toggleLikeComment = asyncHandler(async (req, res, next) => {});
 
 // @Desc: Get all liked  by the authenticated user
 // @route: GET /api/v1/likes/videos
