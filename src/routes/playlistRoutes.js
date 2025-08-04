@@ -11,10 +11,10 @@ router.get("/user/:userId/playlists", playlistController.getUserPlaylists);
 router.post("/", playlistController.createPlaylist);
 
 //Add Video to Playlist
-router.post("/:playlistId/videos/:videoId", playlistController.addVideoToPlaylist);
+router.patch("/:playlistId/videos/add/:videoId", playlistController.addVideoToPlaylist);
 
 // Remove Video from Playlist
-router.delete("/:playlistId/videos/:videoId", playlistController.removeVideoFromPlaylist);
+router.patch("/:playlistId/videos/remove/:videoId", playlistController.removeVideoFromPlaylist);
 
 // Get a playlist by id
 router.get("/:playlistId", playlistController.getPlaylistById);
