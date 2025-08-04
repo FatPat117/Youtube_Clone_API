@@ -5,7 +5,7 @@ const ApiResponse = require("../utils/ApiResponse");
 const Like = require("../models/Like");
 const Video = require("../models/Video");
 const User = require("../models/User");
-
+const Comment = require("../models/Comment");
 // @Desc: Toggle like/unlike on a video
 // @route: POST /api/v1/likes/video/:videoId
 // @access: Private
@@ -41,7 +41,29 @@ exports.toggleLikeVideo = asyncHandler(async (req, res, next) => {
 // @Desc: Toggle like/unlike on a comment
 // @route: POST /api/v1/likes/comment/:commentId
 // @access: Private
-exports.toggleLikeComment = asyncHandler(async (req, res, next) => {});
+exports.toggleLikeComment = asyncHandler(async (req, res, next) => {
+        const { commentId } = req.params;
+        const userId = req.user._id;
+        if (!commentId) {
+                throw new ApiError(400, "CommentId is required");
+        }
+
+        const comment = await Comment.findById(commentId);
+        if (!comment) {
+                throw new ApiError(404, "Comment not found");
+        }
+
+        const existingLike = await Like.findOne({ comment: commentId, likedBy: userId });
+        if (existingLike) {
+                // Unlike comment
+                await Like.findByIdAndDelete({ comment: commentId, likedBy: userId });
+                return res.status(200).json(new ApiResponse(200, null, "Unlike comment successfully"));
+        }
+
+        // Like comment
+        const likeComment = await Like.create({ comment: commentId, likedBy: userId });
+        return res.status(200).json(new ApiResponse(200, likeComment, "Liked comment successfully"));
+});
 
 // @Desc: Get all liked  by the authenticated user
 // @route: GET /api/v1/likes/videos
