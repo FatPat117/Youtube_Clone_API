@@ -196,4 +196,43 @@ exports.getVideoLikes = asyncHandler(async (req, res, next) => {
 // @Desc: Get all users who liked a specific comment
 // @route Get api/v1/comments/:commentId/likes
 // @access: Private
-exports.getCommentLikes = asyncHandler(async (req, res, next) => {});
+exports.getCommentLikes = asyncHandler(async (req, res, next) => {
+        const { commentId } = req.params;
+        if (!commentId) {
+                throw new ApiError(400, "Comment ID is required");
+        }
+
+        const comment = await Comment.findById(commentId);
+        if (!comment) {
+                throw new ApiError(404, "Comment not found");
+        }
+
+        const likes = await Like.aggregate([
+                {
+                        $match: { comment: new mongoose.Types.ObjectId(commentId) },
+                },
+                {
+                        $lookup: {
+                                from: "users",
+                                localField: "likedBy",
+                                foreignField: "_id",
+                                as: "LikedBy",
+                                pipeline: [
+                                        {
+                                                $project: {
+                                                        userName: 1,
+                                                        fullname: 1,
+                                                        avatar: 1,
+                                                },
+                                        },
+                                ],
+                        },
+                },
+                {
+                        $addFields: {
+                                likedBy: { $first: "$LikedBy" },
+                        },
+                },
+        ]);
+        return res.status(200).json(new ApiResponse(200, likes, "Comment users fetched successfully"));
+});
