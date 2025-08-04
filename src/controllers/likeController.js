@@ -73,9 +73,80 @@ exports.toggleLikeComment = asyncHandler(async (req, res, next) => {
 // @route: GET /api/v1/likes/videos
 // @access: Private
 exports.getLikedVideos = asyncHandler(async (req, res, next) => {
-        const { userId } = req.user;
-        const likes = await Like.find({ likedBy: userId });
-        return res.status(200).json(new ApiResponse(200, likes, "Likes fetched successfully"));
+        const userId = req.user._id;
+        if (!userId) {
+                throw new ApiError(400, "User ID is required");
+        }
+
+        const likedVideos = await Like.aggregate([
+                {
+                        $match: {
+                                likedBy: new mongoose.Types.ObjectId(req.user._id),
+                                video: { $exists: true },
+                        },
+                },
+                {
+                        $lookup: {
+                                from: "videos",
+                                localField: "video",
+                                foreignField: "_id",
+                                as: "video",
+                                pipeline: [
+                                        {
+                                                $lookup: {
+                                                        from: "users",
+                                                        localField: "owner",
+                                                        foreignField: "_id",
+                                                        as: "owner",
+                                                        pipeline: [
+                                                                {
+                                                                        $project: {
+                                                                                userName: 1,
+                                                                                fullName: 1,
+                                                                                email: 1,
+                                                                        },
+                                                                },
+                                                        ],
+                                                },
+                                        },
+                                        {
+                                                $addFields: {
+                                                        owner: { $first: "$owner" },
+                                                },
+                                        },
+                                        {
+                                                $project: {
+                                                        _id: 1,
+                                                        title: 1,
+                                                        description: 1,
+                                                        owner: 1,
+                                                },
+                                        },
+                                ],
+                        },
+                },
+                {
+                        $addFields: {
+                                video: { $first: "$video" },
+                        },
+                },
+                {
+                        $project: {
+                                _id: 0,
+                                video: 1,
+                                likedAt: "$createdAt",
+                        },
+                },
+        ]);
+        return res
+                .status(200)
+                .json(
+                        new ApiResponse(
+                                200,
+                                { likedVideos, totalLikedVideos: likedVideos.length },
+                                "Liked videos fetched successfully"
+                        )
+                );
 });
 
 // @Desc: Get all users who liked a specific video
