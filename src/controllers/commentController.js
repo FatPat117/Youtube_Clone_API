@@ -1,32 +1,81 @@
 const mongoose = require("mongoose");
-const asyncHandler = require("express-async-handler");
+const asyncHandler = require("../utils/asyncHandler");
 const Comment = require("../models/Comment");
 const ApiError = require("../utils/ApiError");
 const ApiResponse = require("../utils/ApiResponse");
+const Video = require("../models/Video");
+const { createNotification } = require("./notificationController");
 
 // @Desc: Get all comments for a video with pagination and replies
 // @route: GET /api/v1/comments/video/:videoId
 // @access: Private
-exports.getCommentsForVideo = asyncHandler(async (req, res, next) => {
+exports.getCommentsForVideo = asyncHandler(async (req, res, next) => {});
+
+// @Desc: Create a new comment or reply to a video
+// @route: POST /api/v1/comments/videos/:videoId
+// @access: Private
+exports.createComment = asyncHandler(async (req, res, next) => {
         const { videoId } = req.params;
+        const { content, parentCommentId } = req.body;
+
         if (!videoId) {
                 throw new ApiError(400, "Video ID is required");
         }
-});
 
-// @Desc: Create a new comment or reply to a video
-// @route: POST /api/v1/comments/video/:videoId
-// @access: Private
-exports.createComment = asyncHandler(async (req, res, next) => {
-        const { videoId, content, parentCommentId } = req.body;
-        const userId = req.user._id;
-        if (!videoId || !content) {
-                throw new ApiError(400, "Video ID and content are required");
+        if (!content || content.trim() === "") {
+                throw new ApiError(400, "Comment content is required");
         }
+
+        // Validate video exists
+        const video = await Video.findById(videoId);
+        if (!video) {
+                throw new ApiError(404, "Video not found");
+        }
+
+        let parentComment = null;
+
+        if (parentCommentId) {
+                if (!mongoose.Types.ObjectId.isValid(parentCommentId)) {
+                        throw new ApiError(400, "Invalid parentCommentId");
+                }
+
+                parentComment = await Comment.findById(parentCommentId);
+                if (!parentComment) {
+                        throw new ApiError(404, "Parent comment not found");
+                }
+        }
+
+        const comment = await Comment.create({
+                content,
+                video: video._id,
+                owner: req.user._id,
+                parentComment: parentComment ? parentComment._id : undefined,
+        });
+
+        const populatedComment = await Comment.findById(comment._id).populate("owner", "userName fullName avatar");
+
+        // Send notifications
+        if (parentComment && !parentComment.owner.equals(req.user._id)) {
+                await createNotification(
+                        parentComment.owner,
+                        req.user._id,
+                        "REPLY",
+                        `${req.user.fullName} replied to your comment`
+                );
+        } else if (!video.owner.equals(req.user._id)) {
+                await createNotification(
+                        video.owner,
+                        req.user._id,
+                        "COMMENT",
+                        `${req.user.fullName} commented on your video`
+                );
+        }
+
+        return res.status(201).json(new ApiResponse(201, populatedComment, "Comment created successfully"));
 });
 
 // @Desc : Update an existing comment
-// @route: PATCH /api/v1/comments/video/:videoId
+// @route: PATCH /api/v1/comments/videos/:videoId
 // @access: Private
 exports.updateComment = asyncHandler(async (req, res, next) => {
         const { videoId, commentId } = req.params;
