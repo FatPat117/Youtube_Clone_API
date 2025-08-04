@@ -27,6 +27,8 @@ exports.toggleLikeVideo = asyncHandler(async (req, res, next) => {
         if (existingLike) {
                 // UnLike
                 await Like.findByIdAndDelete(existingLike._id);
+                video.likes--;
+                await video.save();
                 return res.status(200).json(new ApiResponse(200, null, "Unlike video successfully"));
         }
 
@@ -35,6 +37,8 @@ exports.toggleLikeVideo = asyncHandler(async (req, res, next) => {
                 video: videoId,
                 likedBy: userId,
         });
+        video.likes++;
+        await video.save();
         return res.status(200).json(new ApiError(200, likeVideos, "Liked video successfully"));
 });
 
