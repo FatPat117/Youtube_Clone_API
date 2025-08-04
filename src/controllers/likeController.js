@@ -152,7 +152,46 @@ exports.getLikedVideos = asyncHandler(async (req, res, next) => {
 // @Desc: Get all users who liked a specific video
 // @route Get api/v1/videos/:videoId/likes
 // @access: Private
-exports.getVideoLikes = asyncHandler(async (req, res, next) => {});
+exports.getVideoLikes = asyncHandler(async (req, res, next) => {
+        const { videoId } = req.params;
+        if (!videoId) {
+                throw new ApiError(400, "Video ID is required");
+        }
+
+        const video = await Video.findById(videoId);
+        if (!video) {
+                throw new ApiError(404, "Video not found");
+        }
+
+        const likes = await Like.aggregate([
+                {
+                        $match: { video: new mongoose.Types.ObjectId(videoId) },
+                },
+                {
+                        $lookup: {
+                                from: "users",
+                                localField: "likedBy",
+                                foreignField: "_id",
+                                as: "LikedBy",
+                                pipeline: [
+                                        {
+                                                $project: {
+                                                        userName: 1,
+                                                        fullname: 1,
+                                                        avatar: 1,
+                                                },
+                                        },
+                                ],
+                        },
+                },
+                {
+                        $addFields: {
+                                likedBy: { $first: "$LikedBy" },
+                        },
+                },
+        ]);
+        return res.status(200).json(new ApiResponse(200, likes, "Liked users fetched successfully"));
+});
 
 // @Desc: Get all users who liked a specific comment
 // @route Get api/v1/comments/:commentId/likes

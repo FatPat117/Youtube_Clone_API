@@ -12,7 +12,7 @@ router.post("/video/:videoId", verifyJWT, likeController.toggleLikeVideo);
 router.post("/comment/:commentId", verifyJWT, likeController.toggleLikeComment);
 
 router.get("/videos", verifyJWT, likeController.getLikedVideos);
-router.get("/videos/:videoId", verifyJWT, likeController.getVideoLikes);
-router.get("/comments/:commentId", verifyJWT, likeController.getCommentLikes);
+router.get("/videos/:videoId/likes", verifyJWT, likeController.getVideoLikes);
+router.get("/comments/:commentId/likes", verifyJWT, likeController.getCommentLikes);
 
 module.exports = router;
