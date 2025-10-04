@@ -172,32 +172,113 @@ exports.createComment = asyncHandler(async (req, res, next) => {
 });
 
 // @Desc : Update an existing comment
-// @route: PATCH /api/v1/comments/videos/:videoId
+// @route: PATCH /api/v1/comments/:commentId
 // @access: Private
 exports.updateComment = asyncHandler(async (req, res, next) => {
-        const { videoId, commentId } = req.params;
+        const { commentId } = req.params;
         const { content } = req.body;
-        if (!videoId || !commentId || !content) {
-                throw new ApiError(400, "Video ID, comment ID and content are required");
+        if (!commentId) {
+                throw new ApiError(400, "Comment ID is required");
         }
+
+        if (!content || content.trim() === "") {
+                throw new ApiError(400, "Comment content is required");
+        }
+
+        const comment = await Comment.findOne({
+                _id: new mongoose.Types.ObjectId(commentId),
+                owner: new mongoose.Types.ObjectId(req.user._id),
+        });
+        if (!comment) {
+                throw new ApiError(404, "Comment not found");
+        }
+
+        comment.content = content;
+        await comment.save();
+
+        return res.status(200).json(new ApiResponse(200, comment, "Comment updated successfully"));
 });
 
 // @Desc: Delete a comment and all its replies
-// @route: DELETE /api/v1/comments/video/:videoId
+// @route: DELETE /api/v1/comments/:commentId
 // @access: Private
 exports.deleteComment = asyncHandler(async (req, res, next) => {
-        const { videoId, commentId } = req.params;
-        if (!videoId || !commentId) {
-                throw new ApiError(400, "Video ID and comment ID are required");
+        const { commentId } = req.params;
+        if (!commentId) {
+                throw new ApiError(400, "Comment ID is required");
         }
+
+        // Delete comment and all replies
+        await Promise.all([
+                Comment.deleteMany({
+                        parentComment: new mongoose.Types.ObjectId(commentId),
+                }),
+                Comment.findByIdAndDelete(new mongoose.Types.ObjectId(commentId)),
+        ]);
+
+        return res.status(200).json(new ApiResponse(200, null, "Comment deleted successfully"));
 });
 
 // @Desc: Get all replies for a comment with pagination
-// @route: GET /api/v1/comments/video/:videoId/comment/:commentId/replies
+// @route: GET /api/v1/comments/:commentId/replies
 // @access: Private
 exports.getRepliesForComment = asyncHandler(async (req, res, next) => {
-        const { videoId, commentId } = req.params;
-        if (!videoId || !commentId) {
-                throw new ApiError(400, "Video ID and comment ID are required");
+        const { commentId } = req.params;
+        const { page = 1, limit = 10 } = req.query;
+        if (!commentId) {
+                throw new ApiError(400, "Comment ID is required");
         }
+
+        const replies = await Comment.aggregate([
+                {
+                        $match: {
+                                parentComment: new mongoose.Types.ObjectId(commentId),
+                        },
+                },
+                {
+                        $lookup: {
+                                from: "users",
+                                localField: "owner",
+                                foreignField: "_id",
+                                as: "owner",
+                                pipeline: [
+                                        {
+                                                $project: {
+                                                        _id: 1,
+                                                        userName: 1,
+                                                        fullName: 1,
+                                                        avatar: 1,
+                                                },
+                                        },
+                                ],
+                        },
+                },
+                {
+                        $addFields: {
+                                owner: { $first: "$owner" },
+                        },
+                },
+                {
+                        $sort: {
+                                createdAt: -1,
+                        },
+                },
+                {
+                        $skip: (parseInt(page) - 1) * parseInt(limit),
+                },
+                {
+                        $limit: parseInt(limit),
+                },
+        ]);
+
+        // Get total replies count
+        const totalReplies = await Comment.countDocuments({
+                parentComment: new mongoose.Types.ObjectId(commentId),
+        });
+
+        return res.status(200).json(
+                new ApiResponse(200, replies, "Replies fetched successfully", {
+                        totalReplies,
+                })
+        );
 });
