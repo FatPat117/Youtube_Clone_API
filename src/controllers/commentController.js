@@ -9,7 +9,104 @@ const { createNotification } = require("./notificationController");
 // @Desc: Get all comments for a video with pagination and replies
 // @route: GET /api/v1/comments/video/:videoId
 // @access: Private
-exports.getCommentsForVideo = asyncHandler(async (req, res, next) => {});
+exports.getCommentsForVideo = asyncHandler(async (req, res, next) => {
+        const { videoId } = req.params;
+        const { page = 1, limit = 10 } = req.query;
+
+        if (!videoId) {
+                throw new ApiError(400, "Video ID is required");
+        }
+
+        const comments = await Comment.aggregate([
+                {
+                        $match: {
+                                video: new mongoose.Types.ObjectId(videoId),
+                                parentComment: null,
+                        },
+                },
+                {
+                        $lookup: {
+                                from: "user",
+                                localField: "owner",
+                                foreignField: "_id",
+                                as: "owner",
+                                pipeline: [
+                                        {
+                                                $project: {
+                                                        _id: 1,
+                                                        userName: 1,
+                                                        fullName: 1,
+                                                        avatar: 1,
+                                                },
+                                        },
+                                ],
+                        },
+                },
+                {
+                        $lookup: {
+                                from: "comments",
+                                localField: "_id",
+                                foreignField: "parentComment",
+                                as: "replies",
+                                pipeline: [
+                                        {
+                                                $project: {
+                                                        content: 1,
+                                                },
+                                                $lookup: {
+                                                        from: "user",
+                                                        localField: "owner",
+                                                        foreignField: "_id",
+                                                        as: "owner",
+                                                        pipeline: [
+                                                                {
+                                                                        $project: {
+                                                                                _id: 1,
+                                                                                userName: 1,
+                                                                                fullName: 1,
+                                                                                avatar: 1,
+                                                                        },
+                                                                },
+                                                        ],
+                                                },
+                                        },
+                                ],
+                        },
+                },
+                {
+                        $addFields: {
+                                owner: { $first: "$owner" },
+                                replies: { $size: "$replies" },
+                        },
+                },
+                {
+                        $sort: {
+                                createdAt: -1,
+                        },
+                },
+                {
+                        $skip: (parseInt(page) - 1) * parseInt(limit),
+                },
+                {
+                        $limit: parseInt(limit),
+                },
+        ]);
+
+        // Get total comments count
+        const totalComments = await Comment.countDocuments({
+                video: new mongoose.Types.ObjectId(videoId),
+                parentComment: null,
+        });
+
+        return res.status(200).json(
+                new ApiResponse(200, comments, "Comments fetched successfully", {
+                        totalComments,
+                        comments,
+                        currentPage: parseInt(page),
+                        totalPages: Math.ceil(totalComments / parseInt(limit)),
+                })
+        );
+});
 
 // @Desc: Create a new comment or reply to a video
 // @route: POST /api/v1/comments/videos/:videoId

@@ -6,7 +6,7 @@ const User = require("../models/User");
 const mongoose = require("mongoose");
 
 // Internal utility function to create a new notification
-const createNotification = async (recipientId, senderId, type, content) => {
+exports.createNotification = async (recipientId, senderId, type, content) => {
         try {
                 //  Check if recipient has enabled notifications for this type
                 const recipient = await User.findById(recipientId);
@@ -25,10 +25,15 @@ const createNotification = async (recipientId, senderId, type, content) => {
                         return null;
                 }
                 const sender = await User.findById(senderId);
-
-                const notification = await Notification.create({
+                console.log({
                         recipientId,
                         senderId,
+                        type,
+                        content,
+                });
+                const notification = await Notification.create({
+                        recipient: recipientId,
+                        sender: senderId,
                         type,
                         content,
                 });
